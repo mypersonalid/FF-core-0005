@@ -1,0 +1,832 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#020503">
+<title>LIVING PARTICLE CORE</title>
+
+<style>
+:root {
+  --toxic: #a7ff00;
+  --glow: #5bff42;
+  --ink: #020503;
+  --panel: rgba(6,18,8,.82);
+  --line: rgba(132,255,84,.28);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: #d9ffd3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+body { touch-action: none; }
+
+#world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 15%,
+    rgba(0,0,0,.25) 57%,
+    #000 115%
+  );
+}
+
+.scan {
+  opacity: .12;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 3px,
+    rgba(116,255,100,.12) 4px
+  );
+  mix-blend-mode: screen;
+}
+
+header {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: calc(17px + env(safe-area-inset-top))
+    clamp(15px,3vw,30px) 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.logo {
+  font-weight: 900;
+  letter-spacing: .17em;
+  font-size: clamp(12px,2.8vw,17px);
+  color: var(--toxic);
+  text-shadow: 0 0 18px #a7ff0050;
+}
+
+.subtitle {
+  margin-top: 7px;
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: #628368;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  background: var(--panel);
+  font-size: 8px;
+  letter-spacing: .12em;
+  color: #a9ffa3;
+  white-space: nowrap;
+}
+
+.lamp {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: var(--toxic);
+  box-shadow: 0 0 10px var(--toxic);
+  animation: blink 1.4s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: .3; }
+}
+
+.stats {
+  position: fixed;
+  left: clamp(15px,3vw,30px);
+  top: 36%;
+  display: grid;
+  gap: 13px;
+  pointer-events: none;
+}
+
+.stat {
+  border-left: 2px solid #9cff6b99;
+  padding-left: 9px;
+}
+
+.stat span {
+  display: block;
+  font-size: 8px;
+  letter-spacing: .14em;
+  color: #547b59;
+  margin-bottom: 5px;
+}
+
+.stat b {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .05em;
+  color: #d6ffd0;
+}
+
+.rightInfo {
+  position: fixed;
+  right: clamp(15px,3vw,30px);
+  top: 38%;
+  text-align: right;
+  pointer-events: none;
+}
+
+.mode {
+  font-size: clamp(17px,4vw,27px);
+  letter-spacing: .08em;
+  color: var(--toxic);
+  text-shadow: 0 0 20px #a7ff0040;
+}
+
+.modeSub {
+  font-size: 8px;
+  letter-spacing: .12em;
+  color: #5e8061;
+  margin-top: 6px;
+}
+
+.help {
+  position: fixed;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 92vw;
+  text-align: center;
+  color: #729477;
+  font-size: 9px;
+  letter-spacing: .1em;
+  pointer-events: none;
+}
+
+.controls {
+  position: fixed;
+  bottom: calc(15px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  width: max-content;
+  max-width: 96vw;
+}
+
+button {
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: .08em;
+  min-height: 41px;
+  padding: 11px 13px;
+  color: #d4ffd2;
+  background: linear-gradient(#102014e8,#061008f2);
+  border: 1px solid #8dff6859;
+  border-radius: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:active {
+  background: #244c20;
+  transform: translateY(1px);
+}
+
+button.primary {
+  background: var(--toxic);
+  border-color: var(--toxic);
+  color: #091000;
+  font-weight: 900;
+}
+
+button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+
+#flash {
+  position: fixed;
+  inset: 0;
+  background: var(--toxic);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width:560px) {
+  .stats {
+    top: auto;
+    bottom: calc(145px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .rightInfo {
+    top: auto;
+    bottom: calc(145px + env(safe-area-inset-bottom));
+  }
+
+  .help {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    font-size: 8px;
+  }
+
+  .controls { gap: 5px; }
+
+  button {
+    padding: 10px 9px;
+    font-size: 8px;
+    min-height: 39px;
+  }
+
+  .subtitle { font-size: 7px; }
+}
+
+@media (max-width:370px) {
+  .stats {
+    transform: scale(.88);
+    transform-origin: left bottom;
+    left: 8px;
+  }
+
+  .rightInfo {
+    right: 8px;
+    transform: scale(.88);
+    transform-origin: right bottom;
+  }
+
+  .controls { gap: 4px; }
+
+  button { padding: 9px 7px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .lamp { animation: none; }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="world" aria-label="Interactive living particle core"></canvas>
+
+<div class="overlay vignette"></div>
+<div class="overlay scan"></div>
+<div id="flash"></div>
+
+<header>
+  <div>
+    <div class="logo">LIVING<span style="color:#e3ffe0"> // CORE</span></div>
+    <div class="subtitle">PARTICLE ORGANISM · EXPERIMENT 09</div>
+  </div>
+
+  <div class="status">
+    <i class="lamp"></i>
+    <span id="status">ORGANISM ACTIVE</span>
+  </div>
+</header>
+
+<section class="stats">
+  <div class="stat">
+    <span>PARTICLES</span>
+    <b id="count">0000</b>
+  </div>
+
+  <div class="stat">
+    <span>CORE PULSE</span>
+    <b id="pulseRead">72 BPM</b>
+  </div>
+
+  <div class="stat">
+    <span>FIELD STATE</span>
+    <b id="fieldRead">STABLE</b>
+  </div>
+</section>
+
+<div class="rightInfo">
+  <div class="mode" id="mode">BIO / 01</div>
+  <div class="modeSub">TOUCH · ATTRACT · RELEASE</div>
+</div>
+
+<div class="help" id="help">
+  DRAG THE LIVING CORE · TAP TO CREATE A WAVE
+</div>
+
+<div class="controls">
+  <button id="pause">Ⅱ PAUSE</button>
+  <button id="change">CHANGE FORM</button>
+  <button class="primary" id="burst">✦ BURST</button>
+  <button id="reset">RESET</button>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const canvas = document.getElementById('world');
+const ctx = canvas.getContext('2d', { alpha: false });
+const $ = id => document.getElementById(id);
+
+const toxic = '#a7ff00';
+
+let w = 0, h = 0, dpr = 1;
+let last = performance.now();
+let t = 0;
+let paused = false;
+let dragging = false;
+let mouse = null;
+let mode = 0;
+let pulse = 0;
+
+let particles = [];
+let waves = [];
+let fragments = [];
+
+const center = {
+  x: 0, y: 0,
+  tx: 0, ty: 0,
+  vx: 0, vy: 0
+};
+
+const palettes = [
+  { rgb: '167,255,0', hex: '#a7ff00', name: 'BIO / 01' },
+  { rgb: '91,255,66', hex: '#5bff42', name: 'BIO / 02' },
+  { rgb: '204,255,52', hex: '#ccff34', name: 'BIO / 03' }
+];
+
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function makeParticle(initial = false) {
+  const a = rand(0, Math.PI * 2);
+  const r = initial
+    ? rand(18, Math.min(w, h) * .38)
+    : rand(10, Math.min(w, h) * .22);
+
+  return {
+    a,
+    r,
+    orbit: rand(.22, 1.1) * (Math.random() < .5 ? -1 : 1),
+    size: rand(.7, 2.5),
+    seed: rand(0, 100),
+    life: rand(.6, 1),
+    drift: rand(-.4, .4),
+    phase: rand(0, Math.PI * 2),
+    x: center.x + Math.cos(a) * r,
+    y: center.y + Math.sin(a) * r
+  };
+}
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  w = innerWidth;
+  h = innerHeight;
+
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (!center.x) {
+    center.x = center.tx = w / 2;
+    center.y = center.ty = h * .49;
+  }
+
+  const n = Math.max(
+    180,
+    Math.min(560, Math.floor(w * h / 1800))
+  );
+
+  particles = Array.from(
+    { length: n },
+    () => makeParticle(true)
+  );
+}
+
+function wave(x = center.x, y = center.y, power = 1) {
+  waves.push({ x, y, r: 4, life: 1, power });
+  pulse = Math.min(1.5, pulse + .7);
+}
+
+function burst(x = center.x, y = center.y, n = 65) {
+  for (let i = 0; i < n; i++) {
+    const a = rand(0, Math.PI * 2);
+    const s = rand(1.2, 7.5);
+
+    fragments.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      size: rand(.7, 3),
+      life: rand(.5, 1)
+    });
+  }
+
+  wave(x, y, 1.35);
+
+  $('flash').style.opacity = '.055';
+  setTimeout(() => {
+    $('flash').style.opacity = '0';
+  }, 60);
+}
+
+function pointerDown(e) {
+  e.preventDefault();
+  dragging = true;
+  mouse = { x: e.clientX, y: e.clientY };
+
+  center.tx = e.clientX;
+  center.ty = e.clientY;
+
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch (_) {}
+}
+
+function pointerMove(e) {
+  if (!dragging) return;
+
+  e.preventDefault();
+  mouse = { x: e.clientX, y: e.clientY };
+  center.tx = e.clientX;
+  center.ty = e.clientY;
+}
+
+function pointerUp() {
+  if (!dragging) return;
+
+  dragging = false;
+
+  if (mouse) {
+    burst(mouse.x, mouse.y, 30);
+  }
+
+  mouse = null;
+}
+
+canvas.addEventListener('pointerdown', pointerDown, { passive: false });
+canvas.addEventListener('pointermove', pointerMove, { passive: false });
+canvas.addEventListener('pointerup', pointerUp);
+canvas.addEventListener('pointercancel', pointerUp);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+$('pause').onclick = () => {
+  paused = !paused;
+  $('pause').textContent = paused ? '▶ RESUME' : 'Ⅱ PAUSE';
+  $('status').textContent = paused
+    ? 'ORGANISM SUSPENDED'
+    : 'ORGANISM ACTIVE';
+};
+
+$('burst').onclick = () => {
+  burst(center.x, center.y, 100);
+};
+
+$('change').onclick = () => {
+  mode = (mode + 1) % palettes.length;
+
+  document.documentElement.style.setProperty(
+    '--toxic',
+    palettes[mode].hex
+  );
+
+  $('mode').textContent = palettes[mode].name;
+  burst(center.x, center.y, 55);
+};
+
+$('reset').onclick = () => {
+  center.tx = w / 2;
+  center.ty = h * .49;
+  center.vx = center.vy = 0;
+
+  mode = 0;
+
+  document.documentElement.style.setProperty('--toxic', toxic);
+  $('mode').textContent = palettes[0].name;
+
+  particles = Array.from(
+    {
+      length: Math.max(
+        180,
+        Math.min(560, Math.floor(w * h / 1800))
+      )
+    },
+    () => makeParticle(true)
+  );
+
+  waves = [];
+  fragments = [];
+  pulse = 0;
+};
+
+window.addEventListener('resize', resize);
+
+function stroke(x1, y1, x2, y2, color, width = 1) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function background() {
+  ctx.fillStyle = '#020503';
+  ctx.fillRect(0, 0, w, h);
+
+  const step = Math.max(27, Math.min(50, w / 16));
+  const ox = (t * 4) % step;
+  const oy = (t * 2) % step;
+
+  ctx.lineWidth = 1;
+
+  for (let x = -step + ox; x < w + step; x += step) {
+    stroke(x, 0, x, h, 'rgba(91,255,66,.055)');
+  }
+
+  for (let y = -step + oy; y < h + step; y += step) {
+    stroke(0, y, w, y, 'rgba(91,255,66,.05)');
+  }
+
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(t * .025);
+  ctx.setLineDash([2, 9]);
+  ctx.strokeStyle = 'rgba(167,255,0,.09)';
+
+  [
+    Math.min(w, h) * .29,
+    Math.min(w, h) * .38
+  ].forEach(r => {
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawLivingParticles(dt) {
+  const rgb = palettes[mode].rgb;
+  const base = Math.min(w, h) *
+    (.13 + .012 * Math.sin(t * 1.7));
+
+  // Organic particle cloud
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+
+    p.a += p.orbit * dt * .46;
+    p.life = .6 + .4 * Math.sin(t * 1.2 + p.seed);
+
+    const breathing = 1 + .075 * Math.sin(t * 2.1 + p.phase);
+    const r = (p.r + Math.sin(t * 1.1 + p.seed) * 5) * breathing;
+    const asym = 1 + .12 * Math.sin(p.a * 3 + t * .7);
+
+    let x = center.x + Math.cos(p.a) * r * asym;
+    let y = center.y + Math.sin(p.a) * r * .82;
+
+    // Finger interaction bends nearby particles
+    if (mouse) {
+      const dx = mouse.x - x;
+      const dy = mouse.y - y;
+      const d = Math.hypot(dx, dy) + 1;
+      const force = Math.max(0, 1 - d / 180) * .23;
+
+      x += dx * force;
+      y += dy * force;
+    }
+
+    p.x = x;
+    p.y = y;
+
+    const alpha = .25 +
+      .58 * (.5 + .5 * Math.sin(t * 2.4 + p.seed));
+
+    ctx.fillStyle = `rgba(${rgb},${alpha})`;
+    ctx.shadowColor = palettes[mode].hex;
+    ctx.shadowBlur = p.size > 1.7 ? 9 : 4;
+
+    ctx.beginPath();
+    ctx.arc(
+      x, y,
+      p.size * (.75 + .3 * p.life),
+      0, Math.PI * 2
+    );
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Temporary filaments between nearby particles
+    if (i % 7 === 0) {
+      const q = particles[(i + 1) % particles.length];
+
+      if (Math.hypot(q.x - x, q.y - y) < 43) {
+        stroke(
+          x, y, q.x, q.y,
+          `rgba(${rgb},.15)`,
+          .65
+        );
+      }
+    }
+  }
+
+  // Central aura
+  const glow = ctx.createRadialGradient(
+    center.x, center.y, 2,
+    center.x, center.y, base * 2.1
+  );
+
+  glow.addColorStop(0, `rgba(${rgb},${.1 + pulse * .1})`);
+  glow.addColorStop(.45, `rgba(${rgb},.035)`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, base * 2.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Breathing energy point
+  const coreR = 5 + Math.sin(t * 2.2) * 1.8 + pulse * 3;
+
+  ctx.shadowColor = palettes[mode].hex;
+  ctx.shadowBlur = 24;
+
+  const g = ctx.createRadialGradient(
+    center.x - 2, center.y - 2, 1,
+    center.x, center.y, coreR * 3
+  );
+
+  g.addColorStop(0, '#efffd5');
+  g.addColorStop(.25, palettes[mode].hex);
+  g.addColorStop(1, 'rgba(167,255,0,0)');
+
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, coreR * 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  // Orbiting particles
+  for (let i = 0; i < 5; i++) {
+    const a = t * (i % 2 ? -.38 : .28) + i * Math.PI * 2 / 5;
+    const r = base * (1.35 + .1 * Math.sin(t + i));
+
+    const x = center.x + Math.cos(a) * r;
+    const y = center.y + Math.sin(a) * r * .75;
+
+    ctx.fillStyle = palettes[mode].hex;
+    ctx.shadowColor = palettes[mode].hex;
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 1.8 + (i % 2), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawWaves(dt) {
+  for (let i = waves.length - 1; i >= 0; i--) {
+    const q = waves[i];
+
+    q.r += 260 * dt * q.power;
+    q.life -= dt * 1.05;
+
+    ctx.strokeStyle =
+      `rgba(${palettes[mode].rgb},${Math.max(0, q.life * .7)})`;
+
+    ctx.lineWidth = Math.max(.5, 2.2 * q.life);
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (q.life <= 0) waves.splice(i, 1);
+  }
+
+  // Burst fragments
+  for (let i = fragments.length - 1; i >= 0; i--) {
+    const p = fragments[i];
+
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= .975;
+    p.vy *= .975;
+    p.life -= dt * 1.15;
+
+    ctx.fillStyle =
+      `rgba(${palettes[mode].rgb},${Math.max(0, p.life)})`;
+
+    ctx.shadowColor = palettes[mode].hex;
+    ctx.shadowBlur = 8;
+
+    ctx.beginPath();
+    ctx.arc(
+      p.x, p.y,
+      p.size * Math.max(.2, p.life),
+      0, Math.PI * 2
+    );
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    if (p.life <= 0) fragments.splice(i, 1);
+  }
+
+  pulse = Math.max(0, pulse - dt * .75);
+
+  if (mouse && dragging) {
+    ctx.strokeStyle = `rgba(${palettes[mode].rgb},.5)`;
+    ctx.setLineDash([3, 5]);
+
+    ctx.beginPath();
+    ctx.arc(
+      mouse.x,
+      mouse.y,
+      22 + Math.sin(t * 7) * 4,
+      0, Math.PI * 2
+    );
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+  }
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+
+  const dt = Math.min(.04, (now - last) / 1000);
+  last = now;
+
+  if (!paused) {
+    t += dt;
+
+    center.vx +=
+      (center.tx - center.x) * Math.min(1, dt * 4);
+
+    center.vy +=
+      (center.ty - center.y) * Math.min(1, dt * 4);
+
+    center.x += center.vx;
+    center.y += center.vy;
+
+    center.vx *= .86;
+    center.vy *= .86;
+  }
+
+  background();
+  drawLivingParticles(dt);
+  drawWaves(dt);
+
+  $('count').textContent = String(
+    particles.length + fragments.length
+  ).padStart(4, '0');
+
+  $('pulseRead').textContent =
+    Math.round(72 + Math.sin(t * 1.7) * 8 + pulse * 22) + ' BPM';
+
+  $('fieldRead').textContent =
+    pulse > .4 ? 'SURGING' :
+    dragging ? 'RESPONDING' : 'STABLE';
+}
+
+resize();
+
+// Occasional automatic energy waves
+setInterval(() => {
+  if (!paused && !dragging && Math.random() < .38) {
+    wave(
+      center.x + rand(-30, 30),
+      center.y + rand(-30, 30),
+      rand(.6, 1)
+    );
+  }
+}, 2300);
+
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
